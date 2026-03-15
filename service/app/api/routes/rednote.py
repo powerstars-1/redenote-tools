@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, Request
 
-from service.app.api.dependencies import get_rednote_service
+from service.app.api.dependencies import get_rednote_service, require_public_api_key
 from service.app.core.rednote_service import RedNoteService
 from service.app.core.responses import build_success_response, get_request_id
 from service.app.models.rednote import DetailRequest, SearchRequest
 
-router = APIRouter(prefix="/api/v1/rednote", tags=["rednote"])
+router = APIRouter(
+    prefix="/api/v1/rednote",
+    tags=["rednote"],
+    dependencies=[Depends(require_public_api_key)],
+)
 
 
 @router.post("/search", summary="获取小红书搜索结果")

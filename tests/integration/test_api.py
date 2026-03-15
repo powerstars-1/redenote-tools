@@ -6,6 +6,11 @@ from service.app.main import create_app
 from service.app.models.rednote import NoteDetailData, NoteType, SearchResultItem
 from service.app.storage.sqlite_store import SQLiteRedNoteStore
 
+PUBLIC_API_KEY = "public-test-key"
+INTERNAL_API_KEY = "internal-test-key"
+PUBLIC_HEADERS = {"X-API-Key": PUBLIC_API_KEY}
+INTERNAL_HEADERS = {"X-API-Key": INTERNAL_API_KEY}
+
 
 class StubAdapter:
     def search_notes(self, **kwargs):
@@ -50,7 +55,11 @@ class StubAdapter:
 
 
 def build_test_client(tmp_path) -> TestClient:
-    settings = Settings(database_path=tmp_path / "app.db")
+    settings = Settings(
+        database_path=tmp_path / "app.db",
+        api_keys=PUBLIC_API_KEY,
+        internal_api_keys=INTERNAL_API_KEY,
+    )
     store = SQLiteRedNoteStore(
         database_path=settings.resolved_database_path,
         default_sync_target=settings.default_sync_target,
@@ -69,6 +78,7 @@ def test_search_endpoint_returns_standard_envelope(tmp_path):
 
     response = client.post(
         "/api/v1/rednote/search",
+        headers=PUBLIC_HEADERS,
         json={
             "keyword": "防晒",
             "note_type": "image",
@@ -88,13 +98,13 @@ def test_search_endpoint_returns_standard_envelope(tmp_path):
     assert body["data"]["items"][0]["liked_count"] == "99"
     assert body["request_id"].startswith("req_")
 
-    notes_response = client.get("/api/v1/storage/notes")
+    notes_response = client.get("/api/v1/storage/notes", headers=PUBLIC_HEADERS)
     notes_body = notes_response.json()
     assert notes_response.status_code == 200
     assert notes_body["data"]["items"][0]["note_id"] == "note-1"
     assert notes_body["data"]["items"][0]["liked_count_text"] == "99"
 
-    pending_response = client.get("/api/v1/storage/sync/pending")
+    pending_response = client.get("/api/v1/storage/sync/pending", headers=INTERNAL_HEADERS)
     pending_body = pending_response.json()
     assert pending_response.status_code == 200
     assert pending_body["data"]["items"][0]["note_id"] == "note-1"
@@ -113,11 +123,44 @@ def test_root_page_serves_desk_html(tmp_path):
     assert "发布能力预留区" in response.text
 
 
+def test_search_endpoint_requires_api_key(tmp_path):
+    client = build_test_client(tmp_path)
+
+    response = client.post(
+        "/api/v1/rednote/search",
+        json={
+            "keyword": "防晒",
+            "note_type": "image",
+            "publish_time": "7d",
+            "sort_by": "latest",
+            "page_count": 1,
+            "cookie": "a1=test; web_session=session",
+        },
+    )
+
+    assert response.status_code == 401
+    body = response.json()
+    assert body["success"] is False
+    assert body["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_pending_sync_requires_internal_api_key(tmp_path):
+    client = build_test_client(tmp_path)
+
+    response = client.get("/api/v1/storage/sync/pending", headers=PUBLIC_HEADERS)
+
+    assert response.status_code == 401
+    body = response.json()
+    assert body["success"] is False
+    assert body["error"]["code"] == "UNAUTHORIZED"
+
+
 def test_detail_endpoint_validates_cookie(tmp_path):
     client = build_test_client(tmp_path)
 
     response = client.post(
         "/api/v1/rednote/detail",
+        headers=PUBLIC_HEADERS,
         json={
             "url": "https://www.xiaohongshu.com/explore/note-1?xsec_token=test",
         },
@@ -134,6 +177,7 @@ def test_detail_endpoint_updates_note_and_sync_task(tmp_path):
 
     client.post(
         "/api/v1/rednote/search",
+        headers=PUBLIC_HEADERS,
         json={
             "keyword": "防晒",
             "note_type": "image",
@@ -146,6 +190,7 @@ def test_detail_endpoint_updates_note_and_sync_task(tmp_path):
 
     response = client.post(
         "/api/v1/rednote/detail",
+        headers=PUBLIC_HEADERS,
         json={
             "url": "https://www.xiaohongshu.com/explore/note-1?xsec_token=test",
             "cookie": "a1=test; web_session=session",
@@ -154,14 +199,14 @@ def test_detail_endpoint_updates_note_and_sync_task(tmp_path):
 
     assert response.status_code == 200
 
-    note_response = client.get("/api/v1/storage/notes/note-1")
+    note_response = client.get("/api/v1/storage/notes/note-1", headers=PUBLIC_HEADERS)
     note_body = note_response.json()
     assert note_response.status_code == 200
     assert note_body["data"]["desc"] == "正文内容"
     assert note_body["data"]["images"] == ["https://cdn.example.com/1.jpg"]
     assert note_body["data"]["source_type"] == "detail"
 
-    pending_response = client.get("/api/v1/storage/sync/pending")
+    pending_response = client.get("/api/v1/storage/sync/pending", headers=INTERNAL_HEADERS)
     pending_body = pending_response.json()
     assert pending_response.status_code == 200
     task = pending_body["data"]["items"][0]
@@ -170,6 +215,7 @@ def test_detail_endpoint_updates_note_and_sync_task(tmp_path):
 
     success_response = client.post(
         f"/api/v1/storage/sync/tasks/{task['id']}/success",
+        headers=INTERNAL_HEADERS,
         json={"bitable_record_id": "rec_123"},
     )
     success_body = success_response.json()
@@ -179,12 +225,13 @@ def test_detail_endpoint_updates_note_and_sync_task(tmp_path):
 
     client.post(
         "/api/v1/rednote/detail",
+        headers=PUBLIC_HEADERS,
         json={
             "url": "https://www.xiaohongshu.com/explore/note-1?xsec_token=test",
             "cookie": "a1=test; web_session=session",
         },
     )
-    pending_again_response = client.get("/api/v1/storage/sync/pending")
+    pending_again_response = client.get("/api/v1/storage/sync/pending", headers=INTERNAL_HEADERS)
     pending_again_body = pending_again_response.json()
     assert pending_again_response.status_code == 200
     assert pending_again_body["data"]["items"][0]["bitable_record_id"] == "rec_123"
@@ -195,6 +242,7 @@ def test_mark_sync_task_failed(tmp_path):
 
     client.post(
         "/api/v1/rednote/search",
+        headers=PUBLIC_HEADERS,
         json={
             "keyword": "防晒",
             "note_type": "image",
@@ -205,11 +253,12 @@ def test_mark_sync_task_failed(tmp_path):
         },
     )
 
-    pending_response = client.get("/api/v1/storage/sync/pending")
+    pending_response = client.get("/api/v1/storage/sync/pending", headers=INTERNAL_HEADERS)
     task_id = pending_response.json()["data"]["items"][0]["id"]
 
     failed_response = client.post(
         f"/api/v1/storage/sync/tasks/{task_id}/failed",
+        headers=INTERNAL_HEADERS,
         json={"error_message": "多维表格写入失败"},
     )
 

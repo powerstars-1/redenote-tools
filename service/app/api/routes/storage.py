@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, Request
 
-from service.app.api.dependencies import get_rednote_store
+from service.app.api.dependencies import get_rednote_store, require_internal_api_key, require_public_api_key
 from service.app.core.responses import build_success_response, get_request_id
 from service.app.models.storage import (
     MarkSyncTaskFailedRequest,
@@ -16,6 +16,7 @@ router = APIRouter(prefix="/api/v1/storage", tags=["storage"])
 def list_stored_notes(
     request: Request,
     limit: int = Query(default=20, ge=1, le=100),
+    _: None = Depends(require_public_api_key),
     store: SQLiteRedNoteStore = Depends(get_rednote_store),
 ) -> dict:
     result = store.list_notes(limit=limit)
@@ -29,6 +30,7 @@ def list_stored_notes(
 def get_stored_note(
     note_id: str,
     request: Request,
+    _: None = Depends(require_public_api_key),
     store: SQLiteRedNoteStore = Depends(get_rednote_store),
 ) -> dict:
     result = store.get_note(note_id=note_id)
@@ -43,6 +45,7 @@ def list_pending_sync_tasks(
     request: Request,
     target: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
+    _: None = Depends(require_internal_api_key),
     store: SQLiteRedNoteStore = Depends(get_rednote_store),
 ) -> dict:
     task_target = target or request.app.state.settings.default_sync_target
@@ -62,6 +65,7 @@ def mark_sync_task_success(
     task_id: int,
     payload: MarkSyncTaskSuccessRequest,
     request: Request,
+    _: None = Depends(require_internal_api_key),
     store: SQLiteRedNoteStore = Depends(get_rednote_store),
 ) -> dict:
     result = store.mark_sync_task_success(
@@ -79,6 +83,7 @@ def mark_sync_task_failed(
     task_id: int,
     payload: MarkSyncTaskFailedRequest,
     request: Request,
+    _: None = Depends(require_internal_api_key),
     store: SQLiteRedNoteStore = Depends(get_rednote_store),
 ) -> dict:
     result = store.mark_sync_task_failed(
@@ -89,4 +94,3 @@ def mark_sync_task_failed(
         request_id=get_request_id(request),
         data=result,
     )
-

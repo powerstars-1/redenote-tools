@@ -6,6 +6,7 @@ const state = {
 
 const elements = {
   baseUrl: document.getElementById("base-url"),
+  apiKey: document.getElementById("api-key"),
   sharedCookie: document.getElementById("shared-cookie"),
   rememberCookie: document.getElementById("remember-cookie"),
   clearSession: document.getElementById("clear-session"),
@@ -46,6 +47,7 @@ const DETAIL_DEMO_URL =
 const STORAGE_KEYS = {
   baseUrl: "redenote.baseUrl",
   rememberCookie: "redenote.rememberCookie",
+  apiKey: "redenote.apiKey",
   cookie: "redenote.cookie",
 };
 
@@ -64,6 +66,7 @@ function bindEvents() {
   elements.copyJson.addEventListener("click", copyCurrentJson);
   elements.clearSession.addEventListener("click", clearSession);
   elements.baseUrl.addEventListener("change", persistSession);
+  elements.apiKey.addEventListener("input", persistSession);
   elements.rememberCookie.addEventListener("change", persistSession);
   elements.sharedCookie.addEventListener("input", persistSession);
 }
@@ -73,11 +76,18 @@ function hydrateSession() {
   const storedBaseUrl = localStorage.getItem(STORAGE_KEYS.baseUrl);
   const storedRememberCookie = localStorage.getItem(STORAGE_KEYS.rememberCookie);
   const rememberCookie = storedRememberCookie === null ? true : storedRememberCookie === "1";
+  const legacySessionApiKey = sessionStorage.getItem(STORAGE_KEYS.apiKey);
   const legacySessionCookie = sessionStorage.getItem(STORAGE_KEYS.cookie);
   const legacySessionRemember = sessionStorage.getItem(STORAGE_KEYS.rememberCookie);
 
   elements.baseUrl.value = storedBaseUrl || defaultBaseUrl;
   elements.rememberCookie.checked = rememberCookie;
+
+  if (!localStorage.getItem(STORAGE_KEYS.apiKey) && legacySessionApiKey && legacySessionRemember === "1") {
+    localStorage.setItem(STORAGE_KEYS.apiKey, legacySessionApiKey);
+    localStorage.setItem(STORAGE_KEYS.rememberCookie, "1");
+    sessionStorage.removeItem(STORAGE_KEYS.apiKey);
+  }
 
   if (!localStorage.getItem(STORAGE_KEYS.cookie) && legacySessionCookie && legacySessionRemember === "1") {
     localStorage.setItem(STORAGE_KEYS.cookie, legacySessionCookie);
@@ -87,6 +97,7 @@ function hydrateSession() {
   }
 
   if (rememberCookie) {
+    elements.apiKey.value = localStorage.getItem(STORAGE_KEYS.apiKey) || "";
     elements.sharedCookie.value = localStorage.getItem(STORAGE_KEYS.cookie) || "";
   }
 }
@@ -96,21 +107,26 @@ function persistSession() {
   localStorage.setItem(STORAGE_KEYS.rememberCookie, elements.rememberCookie.checked ? "1" : "0");
 
   if (elements.rememberCookie.checked) {
+    localStorage.setItem(STORAGE_KEYS.apiKey, elements.apiKey.value);
     localStorage.setItem(STORAGE_KEYS.cookie, elements.sharedCookie.value);
   } else {
+    localStorage.removeItem(STORAGE_KEYS.apiKey);
     localStorage.removeItem(STORAGE_KEYS.cookie);
   }
 }
 
 function clearSession() {
+  elements.apiKey.value = "";
   elements.sharedCookie.value = "";
   elements.rememberCookie.checked = false;
+  localStorage.removeItem(STORAGE_KEYS.apiKey);
   localStorage.removeItem(STORAGE_KEYS.cookie);
   localStorage.setItem(STORAGE_KEYS.rememberCookie, "0");
+  sessionStorage.removeItem(STORAGE_KEYS.apiKey);
   sessionStorage.removeItem(STORAGE_KEYS.cookie);
   sessionStorage.removeItem(STORAGE_KEYS.rememberCookie);
   persistSession();
-  setBanner("已清空当前会话 Cookie。", "就绪", "success");
+  setBanner("已清空当前会话中的 Cookie 与 API Key。", "就绪", "success");
 }
 
 async function refreshHealth() {
@@ -119,9 +135,7 @@ async function refreshHealth() {
 
   try {
     const response = await fetch(`${getBaseUrl()}/healthz`, {
-      headers: {
-        Accept: "application/json",
-      },
+      headers: buildHeaders(),
     });
     const payload = await response.json();
     if (!response.ok || !payload.success) {
@@ -205,10 +219,7 @@ async function submitRequest({ path, payload, button, mode }) {
     const startedAt = performance.now();
     const response = await fetch(`${getBaseUrl()}${path}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: buildHeaders({ includeJson: true }),
       body: JSON.stringify(payload),
     });
     const envelope = await response.json();
@@ -466,6 +477,27 @@ function getCookieOrThrow() {
     throw new Error("请先在“统一会话配置”里填写 Cookie。");
   }
   return cookie;
+}
+
+function getApiKey() {
+  return elements.apiKey.value.trim();
+}
+
+function buildHeaders({ includeJson = false } = {}) {
+  const headers = {
+    Accept: "application/json",
+  };
+
+  if (includeJson) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const apiKey = getApiKey();
+  if (apiKey) {
+    headers["X-API-Key"] = apiKey;
+  }
+
+  return headers;
 }
 
 async function copyCurrentJson() {

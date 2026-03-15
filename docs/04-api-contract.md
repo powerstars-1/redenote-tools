@@ -4,8 +4,25 @@
 
 - 协议：HTTPS
 - 内容类型：`application/json`
-- 鉴权：后续确定
+- 鉴权：通过 `X-API-Key` 请求头
 - Cookie 处理方式：由调用方按请求传入，默认不持久化
+
+## 鉴权约定
+
+- 公开接口：
+  - `POST /api/v1/rednote/search`
+  - `POST /api/v1/rednote/detail`
+  - `GET /api/v1/storage/notes`
+  - `GET /api/v1/storage/notes/{note_id}`
+- 内部同步接口：
+  - `GET /api/v1/storage/sync/pending`
+  - `POST /api/v1/storage/sync/tasks/{task_id}/success`
+  - `POST /api/v1/storage/sync/tasks/{task_id}/failed`
+- 请求头示例：
+
+```http
+X-API-Key: your-api-key
+```
 
 ## 接口概览
 
@@ -145,6 +162,7 @@
 - `INVALID_URL`
 - `INVALID_COOKIE`
 - `NOT_FOUND`
+- `UNAUTHORIZED`
 - `UPSTREAM_TIMEOUT`
 - `UPSTREAM_RATE_LIMITED`
 - `UPSTREAM_PARSE_ERROR`

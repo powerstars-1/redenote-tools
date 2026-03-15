@@ -122,11 +122,18 @@
                 <span class="field-label">服务地址</span>
                 <input id="base-url" name="base-url" type="url" placeholder="http://127.0.0.1:8000" />
               </label>
+              <label class="field">
+                <span class="field-label">API Key</span>
+                <input id="api-key" name="api-key" type="password" placeholder="请输入 X-API-Key" />
+              </label>
+            </div>
+
+            <div class="field-grid">
               <label class="field field-toggle">
                 <span class="field-label">会话偏好</span>
                 <span class="checkbox-row">
                   <input id="remember-cookie" name="remember-cookie" type="checkbox" />
-                  <span>在当前浏览器自动回填 Cookie</span>
+                  <span>在当前浏览器自动回填 Cookie 与 API Key</span>
                 </span>
               </label>
             </div>
@@ -142,6 +149,7 @@
             </label>
 
             <div class="notice-strip">
+              <span class="notice-chip">API Key 通过 X-API-Key 请求头发送</span>
               <span class="notice-chip">Cookie 仅从前端随请求发送</span>
               <span class="notice-chip">勾选后会保存在当前浏览器本地</span>
               <span class="notice-chip">搜索和详情共用同一份会话</span>

@@ -35,6 +35,12 @@ uvicorn service.app.main:app --reload
 - 详情结果会更新同一条笔记记录
 - 每条笔记会维护一条 `sync_tasks`，供 OpenClaw 或多维表格同步程序读取
 
+当前鉴权方式：
+
+- 公开接口通过 `X-API-Key` 鉴权
+- 内部同步接口优先使用内部 Key
+- `GET /` 与 `GET /healthz` 默认不强制鉴权
+
 默认同步接口：
 
 - `GET /api/v1/storage/sync/pending`

@@ -133,7 +133,16 @@ REDNOTE_UPSTREAM_TIMEOUT_SECONDS=15
 REDNOTE_MAX_PAGE_COUNT=10
 REDNOTE_DATABASE_PATH=/srv/redenote-tools/data/app.db
 REDNOTE_DEFAULT_SYNC_TARGET=openclaw_bitable
+REDNOTE_API_KEYS=replace-me-public-key
+REDNOTE_INTERNAL_API_KEYS=replace-me-internal-key
 ```
+
+说明：
+
+- `REDNOTE_API_KEYS` 支持配置多个值，用英文逗号分隔
+- `REDNOTE_INTERNAL_API_KEYS` 用于 OpenClaw 等内部同步程序
+- 如果未单独配置内部 Key，内部同步接口会回退使用公开 Key
+- 对外开放前必须把示例值 `replace-me-*` 替换成真实随机值
 
 ### 6. 手动验证服务
 

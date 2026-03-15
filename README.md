@@ -18,6 +18,7 @@
 - 搜索与详情两个接口
 - 本地 `SQLite` 持久化
 - OpenClaw 待同步任务接口
+- `X-API-Key` 轻量鉴权
 - 内嵌员工使用的前端工作台
 - 统一错误响应
 - 基础自动化测试
@@ -92,6 +93,18 @@ pytest
 - `GET /api/v1/storage/sync/pending`
 - `POST /api/v1/storage/sync/tasks/{task_id}/success`
 - `POST /api/v1/storage/sync/tasks/{task_id}/failed`
+
+## 鉴权说明
+
+- 公开业务接口通过请求头 `X-API-Key` 鉴权
+- 内部同步接口优先使用 `REDNOTE_INTERNAL_API_KEYS`
+- 如果未单独配置内部 Key，则内部同步接口回退使用公开 Key
+- `GET /` 与 `GET /healthz` 默认不强制鉴权
+
+关键环境变量：
+
+- `REDNOTE_API_KEYS`
+- `REDNOTE_INTERNAL_API_KEYS`
 
 ## 当前实现约束
 

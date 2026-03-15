@@ -29,6 +29,17 @@ def create_app(
     configure_logging(settings.log_level)
     logger = get_logger(__name__)
 
+    if settings.auth_enabled:
+        logger.info(
+            "api_key_auth_enabled public_keys=%s internal_keys=%s",
+            len(settings.parsed_api_keys),
+            len(settings.parsed_internal_api_keys),
+        )
+        if any("replace-me" in key for key in settings.public_allowed_api_keys):
+            logger.warning("api_key_auth_placeholder_detected 当前 API Key 仍是示例占位值，请在生产环境尽快替换。")
+    else:
+        logger.warning("api_key_auth_disabled 所有接口当前未启用 API Key 鉴权，请勿直接暴露到公网。")
+
     app = FastAPI(
         title=settings.app_name,
         version="0.1.0",
