@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     max_page_count: int = 10
     spider_base_url: str = "https://edith.xiaohongshu.com"
     spider_node_modules_dir: Path | None = Field(default=None)
+    database_path: Path | None = Field(default=None)
+    default_sync_target: str = "openclaw_bitable"
     default_user_agent: str = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -31,6 +33,12 @@ class Settings(BaseSettings):
         if self.spider_node_modules_dir is not None:
             return self.spider_node_modules_dir
         return Path(__file__).resolve().parents[2] / "node_modules"
+
+    @property
+    def resolved_database_path(self) -> Path:
+        if self.database_path is not None:
+            return self.database_path
+        return Path(__file__).resolve().parents[3] / "data" / "app.db"
 
 
 @lru_cache(maxsize=1)

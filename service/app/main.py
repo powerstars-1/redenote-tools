@@ -9,9 +9,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from service.app.api.dependencies import build_default_rednote_service
+from service.app.api.dependencies import build_default_rednote_service, build_default_rednote_store
 from service.app.api.routes.health import router as health_router
 from service.app.api.routes.rednote import router as rednote_router
+from service.app.api.routes.storage import router as storage_router
 from service.app.config.settings import Settings, get_settings
 from service.app.core.exceptions import ServiceError
 from service.app.core.responses import build_error_response, get_request_id
@@ -22,6 +23,7 @@ def create_app(
     *,
     settings: Settings | None = None,
     rednote_service=None,
+    rednote_store=None,
 ) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level)
@@ -34,7 +36,11 @@ def create_app(
         redoc_url="/redoc",
     )
     app.state.settings = settings
-    app.state.rednote_service = rednote_service or build_default_rednote_service(settings)
+    app.state.rednote_store = rednote_store or build_default_rednote_store(settings)
+    app.state.rednote_service = rednote_service or build_default_rednote_service(
+        settings,
+        store=app.state.rednote_store,
+    )
     web_dir = Path(__file__).resolve().parent / "web"
 
     @app.middleware("http")
@@ -113,6 +119,7 @@ def create_app(
 
     app.include_router(health_router)
     app.include_router(rednote_router)
+    app.include_router(storage_router)
     return app
 
 

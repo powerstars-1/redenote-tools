@@ -29,9 +29,24 @@ class RedNoteAdapter(Protocol):
         ...
 
 
+class RedNoteStore(Protocol):
+    def persist_search_response(self, response: SearchResponseData) -> None:
+        ...
+
+    def persist_note_detail(self, detail: NoteDetailData) -> None:
+        ...
+
+
 class RedNoteService:
-    def __init__(self, adapter: RedNoteAdapter, logger: Logger | None = None) -> None:
+    def __init__(
+        self,
+        adapter: RedNoteAdapter,
+        *,
+        store: RedNoteStore | None = None,
+        logger: Logger | None = None,
+    ) -> None:
         self._adapter = adapter
+        self._store = store
         self._logger = logger or get_logger(__name__)
 
     def search(self, payload: SearchRequest) -> SearchResponseData:
@@ -54,7 +69,7 @@ class RedNoteService:
             cookie=payload.cookie,
         )
 
-        return SearchResponseData(
+        result = SearchResponseData(
             keyword=payload.keyword,
             filters={
                 "note_type": payload.note_type,
@@ -64,6 +79,9 @@ class RedNoteService:
             page_count=payload.page_count,
             items=items,
         )
+        if self._store is not None:
+            self._store.persist_search_response(result)
+        return result
 
     def detail(self, payload: DetailRequest) -> NoteDetailData:
         self._logger.info(
@@ -71,4 +89,7 @@ class RedNoteService:
             payload.url,
             bool(payload.cookie),
         )
-        return self._adapter.get_note_detail(url=payload.url, cookie=payload.cookie)
+        result = self._adapter.get_note_detail(url=payload.url, cookie=payload.cookie)
+        if self._store is not None:
+            self._store.persist_note_detail(result)
+        return result

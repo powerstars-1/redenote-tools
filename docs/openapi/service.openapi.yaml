@@ -94,3 +94,103 @@ paths:
           description: 非法请求
         "500":
           description: 内部错误或上游失败
+  /api/v1/storage/notes:
+    get:
+      summary: 获取已落库的笔记列表
+      operationId: listStoredNotes
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: 落库笔记列表
+  /api/v1/storage/notes/{note_id}:
+    get:
+      summary: 获取单条已落库笔记
+      operationId: getStoredNote
+      parameters:
+        - in: path
+          name: note_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 单条笔记详情
+        "404":
+          description: 未找到记录
+  /api/v1/storage/sync/pending:
+    get:
+      summary: 获取待同步任务
+      operationId: listPendingSyncTasks
+      parameters:
+        - in: query
+          name: target
+          schema:
+            type: string
+            default: openclaw_bitable
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: 待同步任务列表
+  /api/v1/storage/sync/tasks/{task_id}/success:
+    post:
+      summary: 标记同步任务成功
+      operationId: markSyncTaskSuccess
+      parameters:
+        - in: path
+          name: task_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bitable_record_id:
+                  type: string
+      responses:
+        "200":
+          description: 同步任务已标记成功
+        "404":
+          description: 未找到任务
+  /api/v1/storage/sync/tasks/{task_id}/failed:
+    post:
+      summary: 标记同步任务失败
+      operationId: markSyncTaskFailed
+      parameters:
+        - in: path
+          name: task_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - error_message
+              properties:
+                error_message:
+                  type: string
+      responses:
+        "200":
+          description: 同步任务已标记失败
+        "404":
+          description: 未找到任务

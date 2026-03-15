@@ -19,7 +19,8 @@
 - 第一阶段允许单实例部署
 - 第一阶段允许本地文件日志
 - 第一阶段暂不需要分布式缓存
-- 如果不持久化 Cookie，则第一阶段可以不引入数据库
+- 第一阶段默认使用本地 `SQLite`
+- 第一阶段不需要额外安装 MySQL
 - 第一阶段需要在服务目录执行 `npm install` 安装签名依赖
 
 ## 必备运维能力
@@ -65,6 +66,7 @@
 ```text
 /srv/redenote-tools
   .venv/
+  data/
   runtime/
   service/
 ```
@@ -129,6 +131,8 @@ REDNOTE_APP_ENV=prod
 REDNOTE_LOG_LEVEL=INFO
 REDNOTE_UPSTREAM_TIMEOUT_SECONDS=15
 REDNOTE_MAX_PAGE_COUNT=10
+REDNOTE_DATABASE_PATH=/srv/redenote-tools/data/app.db
+REDNOTE_DEFAULT_SYNC_TARGET=openclaw_bitable
 ```
 
 ### 6. 手动验证服务
@@ -144,6 +148,7 @@ uvicorn service.app.main:app --host 127.0.0.1 --port 8000
 - `http://127.0.0.1:8000/healthz`
 - `http://127.0.0.1:8000/docs`
 - `http://127.0.0.1:8000/`
+- `ls -lh /srv/redenote-tools/data/app.db`
 
 ## systemd 托管示例
 
@@ -258,6 +263,7 @@ sudo systemctl status redenote-tools
 3. `curl http://127.0.0.1:8000/healthz`
 4. `node -v` 与 `python3 --version`
 5. `/srv/redenote-tools/service/node_modules/crypto-js` 是否存在
+6. `/srv/redenote-tools/data/app.db` 是否已创建且有写权限
 
 ## 当前阶段的上线建议
 

@@ -16,6 +16,8 @@
 - `FastAPI` HTTP 服务
 - `Spider_XHS` 最小适配层
 - 搜索与详情两个接口
+- 本地 `SQLite` 持久化
+- OpenClaw 待同步任务接口
 - 内嵌员工使用的前端工作台
 - 统一错误响应
 - 基础自动化测试
@@ -71,6 +73,7 @@ uvicorn service.app.main:app --reload
 
 - 工作台首页：`http://127.0.0.1:8000/`
 - Swagger：`http://127.0.0.1:8000/docs`
+- 默认本地数据库：`data/app.db`
 
 运行测试：
 
@@ -84,12 +87,18 @@ pytest
 - `GET /healthz`
 - `POST /api/v1/rednote/search`
 - `POST /api/v1/rednote/detail`
+- `GET /api/v1/storage/notes`
+- `GET /api/v1/storage/notes/{note_id}`
+- `GET /api/v1/storage/sync/pending`
+- `POST /api/v1/storage/sync/tasks/{task_id}/success`
+- `POST /api/v1/storage/sync/tasks/{task_id}/failed`
 
 ## 当前实现约束
 
 - `cookie` 当前为必填，因为 Spider_XHS 的签名依赖 `a1`
 - 详情接口当前要求传入带 `xsec_token` 的完整笔记链接
 - 服务端不持久化请求级 `cookie`
+- 第一阶段默认使用 `SQLite`，无需额外安装 MySQL
 
 ## Linux 部署提示
 

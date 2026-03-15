@@ -50,9 +50,22 @@ class FakeAdapter:
         )
 
 
+class FakeStore:
+    def __init__(self) -> None:
+        self.search_payloads = []
+        self.detail_payloads = []
+
+    def persist_search_response(self, response) -> None:
+        self.search_payloads.append(response)
+
+    def persist_note_detail(self, detail) -> None:
+        self.detail_payloads.append(detail)
+
+
 def test_search_service_wraps_adapter_result():
     adapter = FakeAdapter()
-    service = RedNoteService(adapter=adapter)
+    store = FakeStore()
+    service = RedNoteService(adapter=adapter, store=store)
 
     result = service.search(
         SearchRequest(
@@ -72,11 +85,13 @@ def test_search_service_wraps_adapter_result():
     assert result.items[0].liked_count == "12"
     assert adapter.search_calls[0]["page_count"] == 2
     assert adapter.search_calls[0]["sort_by"] == "latest"
+    assert store.search_payloads[0].items[0].note_id == "note-1"
 
 
 def test_detail_service_returns_note_detail():
     adapter = FakeAdapter()
-    service = RedNoteService(adapter=adapter)
+    store = FakeStore()
+    service = RedNoteService(adapter=adapter, store=store)
 
     result = service.detail(
         DetailRequest(
@@ -90,3 +105,4 @@ def test_detail_service_returns_note_detail():
     assert result.author_profile_url == "https://www.xiaohongshu.com/user/profile/user-1"
     assert result.liked_count == "1.5w"
     assert adapter.detail_calls[0]["url"].startswith("https://www.xiaohongshu.com/explore/")
+    assert store.detail_payloads[0].note_id == "note-1"

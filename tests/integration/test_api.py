@@ -1,8 +1,10 @@
 from fastapi.testclient import TestClient
 
+from service.app.config.settings import Settings
 from service.app.core.rednote_service import RedNoteService
 from service.app.main import create_app
 from service.app.models.rednote import NoteDetailData, NoteType, SearchResultItem
+from service.app.storage.sqlite_store import SQLiteRedNoteStore
 
 
 class StubAdapter:
@@ -47,9 +49,23 @@ class StubAdapter:
         )
 
 
-def test_search_endpoint_returns_standard_envelope():
-    app = create_app(rednote_service=RedNoteService(adapter=StubAdapter()))
-    client = TestClient(app)
+def build_test_client(tmp_path) -> TestClient:
+    settings = Settings(database_path=tmp_path / "app.db")
+    store = SQLiteRedNoteStore(
+        database_path=settings.resolved_database_path,
+        default_sync_target=settings.default_sync_target,
+    )
+    store.initialize()
+    app = create_app(
+        settings=settings,
+        rednote_store=store,
+        rednote_service=RedNoteService(adapter=StubAdapter(), store=store),
+    )
+    return TestClient(app)
+
+
+def test_search_endpoint_returns_standard_envelope(tmp_path):
+    client = build_test_client(tmp_path)
 
     response = client.post(
         "/api/v1/rednote/search",
@@ -72,10 +88,22 @@ def test_search_endpoint_returns_standard_envelope():
     assert body["data"]["items"][0]["liked_count"] == "99"
     assert body["request_id"].startswith("req_")
 
+    notes_response = client.get("/api/v1/storage/notes")
+    notes_body = notes_response.json()
+    assert notes_response.status_code == 200
+    assert notes_body["data"]["items"][0]["note_id"] == "note-1"
+    assert notes_body["data"]["items"][0]["liked_count_text"] == "99"
 
-def test_root_page_serves_desk_html():
-    app = create_app(rednote_service=RedNoteService(adapter=StubAdapter()))
-    client = TestClient(app)
+    pending_response = client.get("/api/v1/storage/sync/pending")
+    pending_body = pending_response.json()
+    assert pending_response.status_code == 200
+    assert pending_body["data"]["items"][0]["note_id"] == "note-1"
+    assert pending_body["data"]["items"][0]["task_type"] == "search_result"
+    assert pending_body["data"]["items"][0]["payload"]["source"] == "search"
+
+
+def test_root_page_serves_desk_html(tmp_path):
+    client = build_test_client(tmp_path)
 
     response = client.get("/")
 
@@ -85,9 +113,8 @@ def test_root_page_serves_desk_html():
     assert "发布能力预留区" in response.text
 
 
-def test_detail_endpoint_validates_cookie():
-    app = create_app(rednote_service=RedNoteService(adapter=StubAdapter()))
-    client = TestClient(app)
+def test_detail_endpoint_validates_cookie(tmp_path):
+    client = build_test_client(tmp_path)
 
     response = client.post(
         "/api/v1/rednote/detail",
@@ -100,3 +127,94 @@ def test_detail_endpoint_validates_cookie():
     body = response.json()
     assert body["success"] is False
     assert body["error"]["code"] == "INVALID_ARGUMENT"
+
+
+def test_detail_endpoint_updates_note_and_sync_task(tmp_path):
+    client = build_test_client(tmp_path)
+
+    client.post(
+        "/api/v1/rednote/search",
+        json={
+            "keyword": "防晒",
+            "note_type": "image",
+            "publish_time": "7d",
+            "sort_by": "latest",
+            "page_count": 1,
+            "cookie": "a1=test; web_session=session",
+        },
+    )
+
+    response = client.post(
+        "/api/v1/rednote/detail",
+        json={
+            "url": "https://www.xiaohongshu.com/explore/note-1?xsec_token=test",
+            "cookie": "a1=test; web_session=session",
+        },
+    )
+
+    assert response.status_code == 200
+
+    note_response = client.get("/api/v1/storage/notes/note-1")
+    note_body = note_response.json()
+    assert note_response.status_code == 200
+    assert note_body["data"]["desc"] == "正文内容"
+    assert note_body["data"]["images"] == ["https://cdn.example.com/1.jpg"]
+    assert note_body["data"]["source_type"] == "detail"
+
+    pending_response = client.get("/api/v1/storage/sync/pending")
+    pending_body = pending_response.json()
+    assert pending_response.status_code == 200
+    task = pending_body["data"]["items"][0]
+    assert task["task_type"] == "note_detail"
+    assert task["payload"]["note"]["desc"] == "正文内容"
+
+    success_response = client.post(
+        f"/api/v1/storage/sync/tasks/{task['id']}/success",
+        json={"bitable_record_id": "rec_123"},
+    )
+    success_body = success_response.json()
+    assert success_response.status_code == 200
+    assert success_body["data"]["status"] == "success"
+    assert success_body["data"]["bitable_record_id"] == "rec_123"
+
+    client.post(
+        "/api/v1/rednote/detail",
+        json={
+            "url": "https://www.xiaohongshu.com/explore/note-1?xsec_token=test",
+            "cookie": "a1=test; web_session=session",
+        },
+    )
+    pending_again_response = client.get("/api/v1/storage/sync/pending")
+    pending_again_body = pending_again_response.json()
+    assert pending_again_response.status_code == 200
+    assert pending_again_body["data"]["items"][0]["bitable_record_id"] == "rec_123"
+
+
+def test_mark_sync_task_failed(tmp_path):
+    client = build_test_client(tmp_path)
+
+    client.post(
+        "/api/v1/rednote/search",
+        json={
+            "keyword": "防晒",
+            "note_type": "image",
+            "publish_time": "7d",
+            "sort_by": "latest",
+            "page_count": 1,
+            "cookie": "a1=test; web_session=session",
+        },
+    )
+
+    pending_response = client.get("/api/v1/storage/sync/pending")
+    task_id = pending_response.json()["data"]["items"][0]["id"]
+
+    failed_response = client.post(
+        f"/api/v1/storage/sync/tasks/{task_id}/failed",
+        json={"error_message": "多维表格写入失败"},
+    )
+
+    body = failed_response.json()
+    assert failed_response.status_code == 200
+    assert body["data"]["status"] == "failed"
+    assert body["data"]["retry_count"] == 1
+    assert body["data"]["error_message"] == "多维表格写入失败"
