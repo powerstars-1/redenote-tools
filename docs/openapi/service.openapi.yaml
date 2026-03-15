@@ -1,0 +1,94 @@
+openapi: 3.0.3
+info:
+  title: 小红书内容检索服务
+  version: 0.1.0
+  description: >
+    基于 Spider_XHS 二次开发的小红书内容检索服务 OpenAPI 草案。
+servers:
+  - url: https://your-server.example.com
+paths:
+  /healthz:
+    get:
+      summary: 健康检查
+      operationId: healthz
+      responses:
+        "200":
+          description: 服务正常
+  /api/v1/rednote/search:
+    post:
+      summary: 获取小红书搜索结果
+      operationId: searchRedNote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - keyword
+              properties:
+                keyword:
+                  type: string
+                note_type:
+                  type: string
+                  enum:
+                    - default
+                    - image
+                    - video
+                  default: default
+                publish_time:
+                  type: string
+                  enum:
+                    - default
+                    - 1d
+                    - 7d
+                    - 180d
+                  default: default
+                sort_by:
+                  type: string
+                  enum:
+                    - general
+                    - latest
+                    - most_liked
+                    - most_commented
+                    - most_collected
+                  default: general
+                page_count:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  default: 1
+                cookie:
+                  type: string
+      responses:
+        "200":
+          description: 搜索响应
+        "400":
+          description: 非法请求
+        "500":
+          description: 内部错误或上游失败
+  /api/v1/rednote/detail:
+    post:
+      summary: 通过 URL 获取小红书笔记详情
+      operationId: getRedNoteDetail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                cookie:
+                  type: string
+      responses:
+        "200":
+          description: 详情响应
+        "400":
+          description: 非法请求
+        "500":
+          description: 内部错误或上游失败
