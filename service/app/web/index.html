@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RedNote Desk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <div class="page-glow page-glow-left" aria-hidden="true"></div>
+    <div class="page-glow page-glow-right" aria-hidden="true"></div>
+    <div class="page-grid" aria-hidden="true"></div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <div class="brand-mark" aria-hidden="true">RN</div>
+          <div>
+            <p class="eyebrow">Content Ops Console</p>
+            <h1>RedNote Desk</h1>
+            <p class="brand-copy">
+              面向员工使用的小红书采集工作台。先把采集和解析做稳，再平滑扩展到账号与发布。
+            </p>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="主导航">
+          <a href="#workspace" class="nav-item">
+            <span class="nav-kicker">01</span>
+            <span>会话配置</span>
+          </a>
+          <a href="#search" class="nav-item">
+            <span class="nav-kicker">02</span>
+            <span>搜索采集</span>
+          </a>
+          <a href="#detail" class="nav-item">
+            <span class="nav-kicker">03</span>
+            <span>链接解析</span>
+          </a>
+          <a href="#results" class="nav-item">
+            <span class="nav-kicker">04</span>
+            <span>结果面板</span>
+          </a>
+          <a href="#publish" class="nav-item">
+            <span class="nav-kicker">05</span>
+            <span>发布中心</span>
+          </a>
+        </nav>
+
+        <section class="sidebar-card">
+          <div class="section-mini-head">
+            <span class="dot dot-live"></span>
+            <span>使用提醒</span>
+          </div>
+          <ul class="compact-list">
+            <li>Cookie 仅用于当前请求，不进入服务端持久化。</li>
+            <li>搜索结果里的作者主页、互动数据会直接回传，可用于后续录表。</li>
+            <li>发布相关入口先预留结构，后续接入草稿、账号和任务流。</li>
+          </ul>
+        </section>
+      </aside>
+
+      <main class="main-panel">
+        <header class="hero-card card">
+          <div class="hero-content">
+            <div>
+              <p class="eyebrow">小红书内容采集工作台</p>
+              <h2>先采集，后沉淀，再发布</h2>
+              <p class="hero-copy">
+                当前版本聚焦两件事：关键词搜索获取结果，以及通过链接获取笔记详情。界面已经为账号管理、内容草稿和发布任务留好结构。
+              </p>
+            </div>
+            <div class="hero-actions">
+              <div class="status-stack">
+                <span id="service-status" class="status-pill status-pending">服务状态检查中</span>
+                <span id="service-latency" class="status-hint">等待健康检查</span>
+              </div>
+              <div class="hero-button-row">
+                <button type="button" id="refresh-health" class="button secondary">刷新状态</button>
+                <a class="button ghost" href="/docs" target="_blank" rel="noreferrer">打开 Swagger</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-metrics" aria-label="当前会话摘要">
+            <article class="metric-tile">
+              <span class="metric-label">最近搜索结果数</span>
+              <strong id="metric-search-count">0</strong>
+              <span class="metric-note">搜索接口返回的笔记数量</span>
+            </article>
+            <article class="metric-tile">
+              <span class="metric-label">当前详情状态</span>
+              <strong id="metric-detail-state">待解析</strong>
+              <span class="metric-note">点击笔记卡片可直接发起详情请求</span>
+            </article>
+            <article class="metric-tile">
+              <span class="metric-label">最近请求 ID</span>
+              <strong id="metric-request-id">-</strong>
+              <span class="metric-note">便于追踪日志与排障</span>
+            </article>
+          </div>
+        </header>
+
+        <section class="workspace-grid">
+          <section id="workspace" class="card session-card">
+            <div class="section-head">
+              <div>
+                <p class="section-eyebrow">Session</p>
+                <h3>统一会话配置</h3>
+              </div>
+              <button type="button" id="clear-session" class="button tertiary">清空会话</button>
+            </div>
+
+            <div class="field-grid">
+              <label class="field">
+                <span class="field-label">服务地址</span>
+                <input id="base-url" name="base-url" type="url" placeholder="http://127.0.0.1:8000" />
+              </label>
+              <label class="field field-toggle">
+                <span class="field-label">会话偏好</span>
+                <span class="checkbox-row">
+                  <input id="remember-cookie" name="remember-cookie" type="checkbox" />
+                  <span>在当前浏览器自动回填 Cookie</span>
+                </span>
+              </label>
+            </div>
+
+            <label class="field">
+              <span class="field-label">请求 Cookie</span>
+              <textarea
+                id="shared-cookie"
+                name="shared-cookie"
+                rows="5"
+                placeholder="a1=你的a1; web_session=你的web_session"
+              ></textarea>
+            </label>
+
+            <div class="notice-strip">
+              <span class="notice-chip">Cookie 仅从前端随请求发送</span>
+              <span class="notice-chip">勾选后会保存在当前浏览器本地</span>
+              <span class="notice-chip">搜索和详情共用同一份会话</span>
+              <span class="notice-chip">后续可扩展账号池与登录工位</span>
+            </div>
+          </section>
+
+          <section id="search" class="card form-card">
+            <div class="section-head">
+              <div>
+                <p class="section-eyebrow">Search</p>
+                <h3>关键词搜索采集</h3>
+              </div>
+              <span class="section-tip">支持页数、发布时间、排序和图文类型</span>
+            </div>
+
+            <form id="search-form" class="stack-form">
+              <div class="field-grid">
+                <label class="field">
+                  <span class="field-label">关键词</span>
+                  <input id="search-keyword" name="keyword" type="text" placeholder="原创ip" required />
+                </label>
+                <label class="field">
+                  <span class="field-label">内容类型</span>
+                  <select id="search-note-type" name="note_type">
+                    <option value="default">默认</option>
+                    <option value="image" selected>图文</option>
+                    <option value="video">视频</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="field-grid field-grid-third">
+                <label class="field">
+                  <span class="field-label">发布时间</span>
+                  <select id="search-publish-time" name="publish_time">
+                    <option value="default">不限</option>
+                    <option value="1d">一天内</option>
+                    <option value="7d" selected>一周内</option>
+                    <option value="180d">半年内</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field-label">排序方式</span>
+                  <select id="search-sort-by" name="sort_by">
+                    <option value="general">综合</option>
+                    <option value="latest">最新</option>
+                    <option value="most_liked" selected>最多点赞</option>
+                    <option value="most_commented">最多评论</option>
+                    <option value="most_collected">最多收藏</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field-label">页数</span>
+                  <input id="search-page-count" name="page_count" type="number" min="1" max="10" value="1" />
+                </label>
+              </div>
+
+              <div class="button-row">
+                <button type="submit" id="search-submit" class="button primary">开始搜索</button>
+                <button type="button" id="fill-search-demo" class="button tertiary">填充示例</button>
+              </div>
+            </form>
+          </section>
+
+          <section id="detail" class="card form-card">
+            <div class="section-head">
+              <div>
+                <p class="section-eyebrow">Detail</p>
+                <h3>链接详情解析</h3>
+              </div>
+              <span class="section-tip">建议传带 xsec_token 的完整笔记链接</span>
+            </div>
+
+            <form id="detail-form" class="stack-form">
+              <label class="field">
+                <span class="field-label">笔记链接</span>
+                <textarea
+                  id="detail-url"
+                  name="url"
+                  rows="4"
+                  placeholder="https://www.xiaohongshu.com/explore/xxxx?xsec_source=pc_search&xsec_token=..."
+                  required
+                ></textarea>
+              </label>
+
+              <div class="button-row">
+                <button type="submit" id="detail-submit" class="button primary">解析详情</button>
+                <button type="button" id="fill-detail-demo" class="button tertiary">填充示例</button>
+              </div>
+            </form>
+          </section>
+
+          <section id="results" class="card results-card">
+            <div class="section-head">
+              <div>
+                <p class="section-eyebrow">Results</p>
+                <h3>结果浏览台</h3>
+              </div>
+              <span id="response-state" class="section-tip">等待请求</span>
+            </div>
+
+            <div class="response-banner" id="response-banner">
+              <strong>就绪</strong>
+              <span>搜索和解析结果会同时更新这里，便于后续录表和审核。</span>
+            </div>
+
+            <div class="results-layout">
+              <section class="result-column">
+                <div class="column-head">
+                  <h4>搜索返回</h4>
+                  <span id="search-result-summary" class="column-meta">尚未执行搜索</span>
+                </div>
+                <div id="search-results" class="note-list">
+                  <div class="empty-state">
+                    <p>还没有搜索结果。</p>
+                    <span>先填写关键词并执行搜索，结果卡片会显示在这里。</span>
+                  </div>
+                </div>
+              </section>
+
+              <section class="result-column detail-column">
+                <div class="column-head">
+                  <h4>详情返回</h4>
+                  <span id="detail-result-summary" class="column-meta">尚未解析详情</span>
+                </div>
+                <div id="detail-result" class="detail-shell empty-shell">
+                  <div class="empty-state">
+                    <p>还没有详情结果。</p>
+                    <span>可以手动输入链接，也可以在搜索结果卡片里直接点击“解析详情”。</span>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <section id="publish" class="card publish-card">
+            <div class="section-head">
+              <div>
+                <p class="section-eyebrow">Publish Center</p>
+                <h3>发布能力预留区</h3>
+              </div>
+              <span class="section-tip">当前仅做信息架构，不触发发布请求</span>
+            </div>
+
+            <div class="future-grid">
+              <article class="future-card">
+                <div class="future-topline">
+                  <span class="future-index">A</span>
+                  <span class="future-state">即将接入</span>
+                </div>
+                <h4>账号工位</h4>
+                <p>为后续二维码登录、Cookie 托管、员工账号切换预留的统一入口。</p>
+                <ul class="compact-list">
+                  <li>账号会话状态</li>
+                  <li>登录二维码与扫码确认</li>
+                  <li>账号可用性巡检</li>
+                </ul>
+              </article>
+
+              <article class="future-card">
+                <div class="future-topline">
+                  <span class="future-index">B</span>
+                  <span class="future-state">结构已留</span>
+                </div>
+                <h4>草稿与素材</h4>
+                <p>后续接图文、视频、标签、封面和发布文案的整理台，方便从采集结果二次加工。</p>
+                <ul class="compact-list">
+                  <li>草稿列表与版本管理</li>
+                  <li>封面、视频与图集素材池</li>
+                  <li>AI 辅助改写与标签建议</li>
+                </ul>
+              </article>
+
+              <article class="future-card">
+                <div class="future-topline">
+                  <span class="future-index">C</span>
+                  <span class="future-state">后续对接</span>
+                </div>
+                <h4>任务与发布</h4>
+                <p>连接多维表格、审核流程和定时任务之后，这里会成为真正的发布指挥台。</p>
+                <ul class="compact-list">
+                  <li>待审核队列</li>
+                  <li>定时发布与重试</li>
+                  <li>多账号分发与结果回写</li>
+                </ul>
+              </article>
+            </div>
+          </section>
+
+          <section class="card json-card">
+            <div class="section-head">
+              <div>
+                <p class="section-eyebrow">JSON / Sync</p>
+                <h3>原始响应与同步准备</h3>
+              </div>
+              <button type="button" id="copy-json" class="button secondary">复制当前 JSON</button>
+            </div>
+
+            <div class="sync-strip">
+              <span class="sync-step">1. 当前响应标准化</span>
+              <span class="sync-step">2. 存储为待同步记录</span>
+              <span class="sync-step">3. OpenClaw 写入多维表格</span>
+            </div>
+
+            <pre id="json-output" class="json-output">{
+  "message": "执行搜索或详情解析后，这里会显示完整响应 JSON。"
+}</pre>
+          </section>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "redenote-tools-runtime",
+  "private": true,
+  "description": "Spider_XHS signing runtime dependencies",
+  "dependencies": {
+    "crypto-js": "^4.2.0"
+  }
+}

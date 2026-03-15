@@ -26,6 +26,7 @@ paths:
               type: object
               required:
                 - keyword
+                - cookie
               properties:
                 keyword:
                   type: string
@@ -79,6 +80,7 @@ paths:
               type: object
               required:
                 - url
+                - cookie
               properties:
                 url:
                   type: string

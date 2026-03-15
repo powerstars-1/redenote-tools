@@ -2,7 +2,7 @@
 
 这是一个基于 `Spider_XHS` 二次开发的服务端项目，用于提供小红书内容检索能力。
 
-当前仓库采用“文档先行”的开发方式。第一阶段的交付目标是一个可部署到自有服务器的后端服务，优先支持：
+当前仓库采用“文档先行 + 规范实现”的开发方式。第一阶段已经开始落地可部署的后端服务，优先支持：
 
 - 关键词搜索结果获取
 - 通过 URL 获取笔记详情
@@ -11,7 +11,20 @@
 
 ## 当前状态
 
-当前阶段聚焦于需求梳理、技术选型、系统架构、接口契约和迭代规划，尚未开始提交正式业务实现代码。
+当前仓库已包含第一版服务骨架：
+
+- `FastAPI` HTTP 服务
+- `Spider_XHS` 最小适配层
+- 搜索与详情两个接口
+- 内嵌员工使用的前端工作台
+- 统一错误响应
+- 基础自动化测试
+
+当前阶段仍然是 MVP，真实采集依赖：
+
+- Python 3.11+
+- Node.js 18+
+- 调用方按请求传入有效小红书 `cookie`
 
 ## 文档目录
 
@@ -33,4 +46,53 @@ redenote-tools/
   tests/
 ```
 
-其中 `service/` 和 `tests/` 目前为实现阶段预留的占位目录。
+## 快速启动
+
+安装 Python 依赖：
+
+```bash
+pip install -e .[dev]
+```
+
+安装 Spider_XHS 签名所需 Node 依赖：
+
+```bash
+cd service
+npm install
+```
+
+启动服务：
+
+```bash
+uvicorn service.app.main:app --reload
+```
+
+启动后可访问：
+
+- 工作台首页：`http://127.0.0.1:8000/`
+- Swagger：`http://127.0.0.1:8000/docs`
+
+运行测试：
+
+```bash
+pytest
+```
+
+## 当前接口
+
+- `GET /`
+- `GET /healthz`
+- `POST /api/v1/rednote/search`
+- `POST /api/v1/rednote/detail`
+
+## 当前实现约束
+
+- `cookie` 当前为必填，因为 Spider_XHS 的签名依赖 `a1`
+- 详情接口当前要求传入带 `xsec_token` 的完整笔记链接
+- 服务端不持久化请求级 `cookie`
+
+## Linux 部署提示
+
+- 可直接参考 [部署基线](D:/redenote-tools/docs/06-deployment-baseline.md)
+- 建议复制一份 [.env.example](D:/redenote-tools/.env.example) 为 `.env`
+- 生产环境建议使用 `systemd + Nginx`

@@ -33,7 +33,8 @@
 - `publish_time`：可选，默认 `default`
 - `sort_by`：可选，默认 `general`
 - `page_count`：可选，取值范围 `1-10`，默认 `1`
-- `cookie`：可选，但建议传入以提高稳定性
+- `cookie`：必填，当前至少需要包含 `a1`，建议传入完整登录态 Cookie
+- 互动数字字段按文本返回，以保留 `1.5w`、`2.3万` 这类原始展示样式
 
 ### 搜索响应
 
@@ -56,11 +57,12 @@
         "note_type": "image",
         "author_id": "user_xxx",
         "author_name": "示例作者",
+        "author_profile_url": "https://www.xiaohongshu.com/user/profile/user_xxx",
         "url": "https://www.xiaohongshu.com/explore/xxxx?xsec_token=...",
         "cover": "https://...",
-        "liked_count": 123,
-        "collected_count": 45,
-        "comment_count": 6,
+        "liked_count": "123",
+        "collected_count": "45",
+        "comment_count": "6",
         "publish_time": "2026-03-15T08:00:00Z",
         "xsec_token": "..."
       }
@@ -79,6 +81,12 @@
 }
 ```
 
+### 详情字段规则
+
+- `url`：必填，当前阶段建议传入带 `xsec_token` 的完整笔记链接
+- `cookie`：必填，当前至少需要包含 `a1`
+- 互动数字字段按文本返回，以保留 `1.5w`、`2.3万` 这类原始展示样式
+
 ### 详情响应
 
 ```json
@@ -92,10 +100,11 @@
     "note_type": "image",
     "author_id": "user_xxx",
     "author_name": "示例作者",
-    "liked_count": 123,
-    "collected_count": 45,
-    "comment_count": 6,
-    "share_count": 2,
+    "author_profile_url": "https://www.xiaohongshu.com/user/profile/user_xxx",
+    "liked_count": "1.5w",
+    "collected_count": "45",
+    "comment_count": "6",
+    "share_count": "2",
     "publish_time": "2026-03-15T08:00:00Z",
     "last_update_time": "2026-03-15T09:00:00Z",
     "images": [
